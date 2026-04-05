@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Yokbaji - Reaction Engine</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a; color: #fff;
+      min-height: 100vh; min-height: 100dvh;
+      overflow-x: hidden;
+    }
+    .app { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
+
+    /* Header */
+    .header { text-align: center; padding: 24px 0 20px; }
+    .header h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .header h1 span { color: #ff6b35; }
+    .header p { color: #888; font-size: 13px; margin-top: 4px; }
+
+    /* Sections */
+    .section { margin-bottom: 24px; }
+    .section-title {
+      font-size: 14px; font-weight: 600; color: #aaa;
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    /* Character Setup Card */
+    .card {
+      background: #1a1a1a; border-radius: 16px;
+      padding: 20px; border: 1px solid #2a2a2a;
+    }
+
+    /* Photo upload */
+    .upload-area {
+      width: 100%; aspect-ratio: 1; max-height: 200px;
+      border: 2px dashed #333; border-radius: 12px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s;
+      overflow: hidden; position: relative;
+      margin-bottom: 16px;
+    }
+    .upload-area:hover { border-color: #ff6b35; background: #1f1510; }
+    .upload-area.has-image { border-style: solid; border-color: #ff6b35; }
+    .upload-area img {
+      width: 100%; height: 100%; object-fit: cover;
+      position: absolute; top: 0; left: 0;
+    }
+    .upload-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+    .upload-text { font-size: 13px; color: #666; }
+    input[type="file"] { display: none; }
+
+    /* Select groups */
+    .select-group { margin-bottom: 12px; }
+    .select-group label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; }
+    .btn-group { display: flex; gap: 8px; }
+    .btn-option {
+      flex: 1; padding: 10px 8px; border: 1px solid #333;
+      border-radius: 8px; background: #111; color: #ccc;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      transition: all 0.15s; text-align: center;
+    }
+    .btn-option:hover { border-color: #555; color: #fff; }
+    .btn-option.active {
+      border-color: #ff6b35; background: #2a1510;
+      color: #ff6b35; font-weight: 600;
+    }
+
+    /* Name input */
+    .name-input {
+      width: 100%; padding: 10px 12px; border: 1px solid #333;
+      border-radius: 8px; background: #111; color: #fff;
+      font-size: 14px; margin-top: 4px;
+    }
+    .name-input::placeholder { color: #555; }
+    .name-input:focus { outline: none; border-color: #ff6b35; }
+
+    /* Create character button */
+    .btn-create {
+      width: 100%; padding: 14px; border: none; border-radius: 12px;
+      background: #ff6b35; color: #fff; font-size: 15px;
+      font-weight: 700; cursor: pointer; transition: all 0.15s;
+      margin-top: 16px;
+    }
+    .btn-create:hover { background: #e55a28; }
+    .btn-create:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+    /* Character badge (after creation) */
+    .character-badge {
+      display: flex; align-items: center; gap: 12px;
+      background: #1a1a1a; border-radius: 12px;
+      padding: 12px 16px; border: 1px solid #2a2a2a;
+    }
+    .character-badge img {
+      width: 48px; height: 48px; border-radius: 50%;
+      object-fit: cover; border: 2px solid #ff6b35;
+    }
+    .character-badge .info { flex: 1; }
+    .character-badge .name { font-weight: 600; font-size: 15px; }
+    .character-badge .meta { font-size: 12px; color: #888; margin-top: 2px; }
+    .btn-reset {
+      padding: 6px 12px; border: 1px solid #333; border-radius: 6px;
+      background: transparent; color: #888; font-size: 12px;
+      cursor: pointer;
+    }
+    .btn-reset:hover { border-color: #666; color: #fff; }
+
+    /* Message input area */
+    .message-area {
+      display: flex; gap: 8px; align-items: flex-end;
+    }
+    .message-input {
+      flex: 1; padding: 12px 14px; border: 1px solid #333;
+      border-radius: 12px; background: #1a1a1a; color: #fff;
+      font-size: 15px; resize: none; min-height: 48px;
+      max-height: 120px; font-family: inherit;
+    }
+    .message-input::placeholder { color: #555; }
+    .message-input:focus { outline: none; border-color: #ff6b35; }
+    .btn-send {
+      width: 48px; height: 48px; border: none; border-radius: 12px;
+      background: #ff6b35; color: #fff; font-size: 20px;
+      cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-send:hover { background: #e55a28; }
+    .btn-send:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+    /* Reaction display */
+    .reaction-display { margin-top: 20px; }
+    .reaction-video-wrap {
+      width: 100%; aspect-ratio: 1;
+      background: #111; border-radius: 16px;
+      overflow: hidden; position: relative;
+      border: 1px solid #2a2a2a;
+    }
+    .reaction-video-wrap video {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10,10,10,0.85);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #333; border-top-color: #ff6b35;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: #888; font-size: 14px; }
+
+    /* Dialogue bubble */
+    .dialogue-bubble {
+      background: #1a1a1a; border: 1px solid #2a2a2a;
+      border-radius: 16px; padding: 16px 20px;
+      margin-top: 12px; position: relative;
+    }
+    .dialogue-bubble::before {
+      content: ''; position: absolute; top: -8px; left: 32px;
+      width: 16px; height: 16px; background: #1a1a1a;
+      border-left: 1px solid #2a2a2a; border-top: 1px solid #2a2a2a;
+      transform: rotate(45deg);
+    }
+    .dialogue-text {
+      font-size: 16px; line-height: 1.5; font-weight: 500;
+    }
+    .dialogue-meta {
+      font-size: 11px; color: #666; margin-top: 8px;
+    }
+
+    /* Placeholder state */
+    .placeholder {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; color: #444; text-align: center;
+      padding: 40px;
+    }
+    .placeholder-icon { font-size: 48px; margin-bottom: 12px; }
+    .placeholder-text { font-size: 14px; line-height: 1.5; }
+
+    /* Hidden */
+    .hidden { display: none !important; }
+
+    /* Error toast */
+    .error-toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #dc3545; color: #fff; padding: 12px 20px;
+      border-radius: 10px; font-size: 14px; z-index: 100;
+      animation: fadeInUp 0.3s ease;
+      max-width: 90%; text-align: center;
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translate(-50%, 10px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <div class="header">
+      <h1><span>Yokbaji</span> Reaction</h1>
+      <p>Upload a face, pick a personality, get a reaction</p>
+    </div>
+
+    <!-- Step 1: Character Setup -->
+    <div class="section" id="setup-section">
+      <div class="section-title">1. Create Character</div>
+      <div class="card" id="setup-card">
+        <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+          <div class="upload-icon">+</div>
+          <div class="upload-text">Tap to upload face photo</div>
+        </div>
+        <input type="file" id="file-input" accept="image/*">
+
+        <div class="select-group">
+          <label>Personality</label>
+          <div class="btn-group" id="personality-group">
+            <button class="btn-option" data-value="WEAK">Weak</button>
+            <button class="btn-option" data-value="ANGRY">Angry</button>
+            <button class="btn-option" data-value="SARCASTIC">Sarcastic</button>
+            <button class="btn-option" data-value="STOIC">Stoic</button>
+          </div>
+        </div>
+
+        <div class="select-group">
+          <label>Gender</label>
+          <div class="btn-group" id="gender-group">
+            <button class="btn-option" data-value="M">Male</button>
+            <button class="btn-option" data-value="F">Female</button>
+            <button class="btn-option" data-value="N">Neutral</button>
+          </div>
+        </div>
+
+        <div class="select-group">
+          <label>Name (optional)</label>
+          <input class="name-input" id="name-input" placeholder="Give your character a name">
+        </div>
+
+        <button class="btn-create" id="btn-create" disabled>Create Character</button>
+      </div>
+
+      <!-- Character badge (shown after creation) -->
+      <div class="character-badge hidden" id="character-badge">
+        <img id="badge-img" src="" alt="">
+        <div class="info">
+          <div class="name" id="badge-name"></div>
+          <div class="meta" id="badge-meta"></div>
+        </div>
+        <button class="btn-reset" id="btn-reset">Change</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Send Message -->
+    <div class="section" id="message-section">
+      <div class="section-title">2. Say Something</div>
+      <div class="message-area">
+        <textarea class="message-input" id="message-input" placeholder="Type a message to trigger a reaction..." rows="1"></textarea>
+        <button class="btn-send" id="btn-send" disabled title="Send">&#9654;</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Reaction Display -->
+    <div class="section" id="reaction-section">
+      <div class="section-title">3. Reaction</div>
+      <div class="reaction-video-wrap" id="video-wrap">
+        <div class="placeholder" id="reaction-placeholder">
+          <div class="placeholder-icon">&#127916;</div>
+          <div class="placeholder-text">Create a character and send a message<br>to see their reaction</div>
+        </div>
+        <video id="reaction-video" class="hidden" autoplay loop playsinline muted></video>
+        <div class="loading-overlay hidden" id="loading-overlay">
+          <div class="spinner"></div>
+          <div class="loading-text">Generating reaction...</div>
+        </div>
+      </div>
+      <div class="dialogue-bubble hidden" id="dialogue-bubble">
+        <div class="dialogue-text" id="dialogue-text"></div>
+        <div class="dialogue-meta" id="dialogue-meta"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '';
+
+    let state = {
+      characterId: null,
+      personality: null,
+      gender: null,
+      imageFile: null,
+      imagePreview: null,
+      generating: false,
+    };
+
+    // DOM refs
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    const personalityGroup = document.getElementById('personality-group');
+    const genderGroup = document.getElementById('gender-group');
+    const nameInput = document.getElementById('name-input');
+    const btnCreate = document.getElementById('btn-create');
+    const setupCard = document.getElementById('setup-card');
+    const characterBadge = document.getElementById('character-badge');
+    const badgeImg = document.getElementById('badge-img');
+    const badgeName = document.getElementById('badge-name');
+    const badgeMeta = document.getElementById('badge-meta');
+    const btnReset = document.getElementById('btn-reset');
+    const messageInput = document.getElementById('message-input');
+    const btnSend = document.getElementById('btn-send');
+    const reactionPlaceholder = document.getElementById('reaction-placeholder');
+    const reactionVideo = document.getElementById('reaction-video');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const dialogueBubble = document.getElementById('dialogue-bubble');
+    const dialogueText = document.getElementById('dialogue-text');
+    const dialogueMeta = document.getElementById('dialogue-meta');
+
+    // --- Button group selection ---
+    function setupBtnGroup(group, onSelect) {
+      group.querySelectorAll('.btn-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+          group.querySelectorAll('.btn-option').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          onSelect(btn.dataset.value);
+        });
+      });
+    }
+    setupBtnGroup(personalityGroup, v => { state.personality = v; checkCreateReady(); });
+    setupBtnGroup(genderGroup, v => { state.gender = v; checkCreateReady(); });
+
+    // --- File upload ---
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      state.imageFile = file;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        state.imagePreview = ev.target.result;
+        uploadArea.innerHTML = `<img src="${ev.target.result}" alt="Face">`;
+        uploadArea.classList.add('has-image');
+        checkCreateReady();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // --- Create readiness ---
+    function checkCreateReady() {
+      btnCreate.disabled = !(state.imageFile && state.personality && state.gender);
+    }
+
+    // --- Create character ---
+    btnCreate.addEventListener('click', async () => {
+      if (btnCreate.disabled) return;
+      btnCreate.disabled = true;
+      btnCreate.textContent = 'Creating...';
+
+      try {
+        const form = new FormData();
+        form.append('image', state.imageFile);
+        form.append('personality_type', state.personality);
+        form.append('gender_type', state.gender);
+        if (nameInput.value.trim()) form.append('name', nameInput.value.trim());
+
+        const res = await fetch(`${API_BASE}/api/characters`, { method: 'POST', body: form });
+        if (!res.ok) throw new Error((await res.json()).error || 'Failed to create character');
+
+        const char = await res.json();
+        state.characterId = char.character_id;
+
+        // Show badge
+        badgeImg.src = state.imagePreview;
+        badgeName.textContent = char.name || char.character_id;
+        badgeMeta.textContent = `${char.personality_type} / ${char.gender_type}`;
+        setupCard.classList.add('hidden');
+        characterBadge.classList.remove('hidden');
+
+        // Enable messaging
+        btnSend.disabled = false;
+        messageInput.focus();
+      } catch (err) {
+        showError(err.message);
+        btnCreate.disabled = false;
+      }
+      btnCreate.textContent = 'Create Character';
+    });
+
+    // --- Reset character ---
+    btnReset.addEventListener('click', () => {
+      state.characterId = null;
+      btnSend.disabled = true;
+      characterBadge.classList.add('hidden');
+      setupCard.classList.remove('hidden');
+    });
+
+    // --- Auto-resize textarea ---
+    messageInput.addEventListener('input', () => {
+      messageInput.style.height = 'auto';
+      messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+    });
+
+    // --- Send reaction ---
+    async function sendReaction() {
+      const msg = messageInput.value.trim();
+      if (!msg || !state.characterId || state.generating) return;
+
+      state.generating = true;
+      btnSend.disabled = true;
+
+      // Show loading
+      reactionPlaceholder.classList.add('hidden');
+      reactionVideo.classList.add('hidden');
+      dialogueBubble.classList.add('hidden');
+      loadingOverlay.classList.remove('hidden');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/reactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            character_id: state.characterId,
+            user_message: msg,
+          }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Reaction failed');
+
+        const data = await res.json();
+
+        // Show video
+        loadingOverlay.classList.add('hidden');
+        reactionVideo.src = data.video_url;
+        reactionVideo.classList.remove('hidden');
+        reactionVideo.play().catch(() => {});
+
+        // Show dialogue
+        dialogueText.textContent = data.dialogue;
+        dialogueMeta.textContent = `${data.personality_type} | ${data.cached ? 'cached' : 'new'} | ${data.base_asset_code}`;
+        dialogueBubble.classList.remove('hidden');
+
+        // Clear input
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+      } catch (err) {
+        loadingOverlay.classList.add('hidden');
+        reactionPlaceholder.classList.remove('hidden');
+        showError(err.message);
+      }
+
+      state.generating = false;
+      btnSend.disabled = false;
+    }
+
+    btnSend.addEventListener('click', sendReaction);
+    messageInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendReaction();
+      }
+    });
+
+    // --- Error toast ---
+    function showError(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'error-toast';
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+  </script>
+</body>
+</html>

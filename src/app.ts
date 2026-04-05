@@ -21,6 +21,10 @@ const assetsDir = getAssetsDir();
 app.use("/storage", express.static(storageDir));
 app.use("/assets", express.static(assetsDir));
 
+// Serve frontend from public/
+const publicDir = path.resolve(__dirname, "../public");
+app.use(express.static(publicDir));
+
 // Multer for image uploads
 const uploadDir = path.join(storageDir, "uploads");
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -127,6 +131,11 @@ app.post("/api/reactions", async (req, res) => {
     const status = err.message?.includes("not found") ? 404 : 500;
     res.status(status).json({ error: err.message });
   }
+});
+
+// SPA fallback — serve index.html for non-API routes
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(publicDir, "index.html"));
 });
 
 export default app;

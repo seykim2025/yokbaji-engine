@@ -1,0 +1,10 @@
+node_modules/
+dist/
+storage/
+.vercel/
+*.log
+.env
+.env.*
+comment.json
+review.json
+update.json

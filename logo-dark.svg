@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <defs>
+    <linearGradient id="bg-dark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="flame-grad-d" x1="0.5" y1="1" x2="0.5" y2="0">
+      <stop offset="0%" stop-color="#dc2626"/>
+      <stop offset="40%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="can-grad-d" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="flame-glow">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background: rounded square dark -->
+  <rect width="600" height="600" rx="120" ry="120" fill="url(#bg-dark)"/>
+
+  <!-- Subtle border glow -->
+  <rect width="596" height="596" x="2" y="2" rx="118" ry="118" fill="none" stroke="rgba(148,163,184,0.15)" stroke-width="1.5"/>
+
+  <!-- Trash can body -->
+  <g transform="translate(300, 310)">
+    <!-- Can body -->
+    <path d="M-70,20 L-60,130 Q-58,145 -42,145 L42,145 Q58,145 60,130 L70,20 Z" fill="url(#can-grad-d)" stroke="#94a3b8" stroke-width="2" opacity="0.95"/>
+    <!-- Can lid -->
+    <rect x="-80" y="0" width="160" height="22" rx="6" fill="#94a3b8" stroke="#cbd5e1" stroke-width="1.5" opacity="0.9"/>
+    <!-- Lid handle -->
+    <rect x="-20" y="-12" width="40" height="14" rx="5" fill="#cbd5e1" stroke="#e2e8f0" stroke-width="1.5" opacity="0.85"/>
+    <!-- Can lines -->
+    <line x1="-30" y1="50" x2="-25" y2="120" stroke="#94a3b8" stroke-width="1.5" opacity="0.25"/>
+    <line x1="0" y1="45" x2="0" y2="125" stroke="#94a3b8" stroke-width="1.5" opacity="0.25"/>
+    <line x1="30" y1="50" x2="25" y2="120" stroke="#94a3b8" stroke-width="1.5" opacity="0.25"/>
+  </g>
+
+  <!-- Flame above can with glow -->
+  <g transform="translate(300, 220)" filter="url(#flame-glow)">
+    <!-- Main flame -->
+    <path d="M0,-120 C-15,-80 -45,-60 -50,-20 C-55,25 -30,50 0,55 C30,50 55,25 50,-20 C45,-60 15,-80 0,-120 Z" fill="url(#flame-grad-d)" opacity="0.95"/>
+    <!-- Inner flame -->
+    <path d="M0,-70 C-8,-45 -25,-35 -25,-5 C-25,18 -12,30 0,32 C12,30 25,18 25,-5 C25,-35 8,-45 0,-70 Z" fill="#fde68a" opacity="0.8"/>
+    <!-- Flame core -->
+    <ellipse cx="0" cy="10" rx="10" ry="14" fill="#ffffff" opacity="0.55"/>
+  </g>
+
+  <!-- Angry face on flame -->
+  <g transform="translate(300, 185)">
+    <!-- Left eye (angry slant) -->
+    <path d="M-18,-8 L-10,-14 L-10,-4 Z" fill="#1e293b" opacity="0.65"/>
+    <!-- Right eye (angry slant) -->
+    <path d="M18,-8 L10,-14 L10,-4 Z" fill="#1e293b" opacity="0.65"/>
+    <!-- Angry mouth -->
+    <path d="M-12,8 Q0,2 12,8" stroke="#1e293b" stroke-width="2.5" fill="none" opacity="0.55" stroke-linecap="round"/>
+  </g>
+
+  <!-- Brand text -->
+  <text x="300" y="520" text-anchor="middle" font-family="'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif" font-size="52" font-weight="700" fill="#f1f5f9" letter-spacing="4">욕바지</text>
+  <text x="300" y="555" text-anchor="middle" font-family="'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif" font-size="18" font-weight="400" fill="#94a3b8" letter-spacing="6">YOKBAJI</text>
+</svg>

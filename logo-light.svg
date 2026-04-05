@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <defs>
+    <linearGradient id="bg-light" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <linearGradient id="flame-grad" x1="0.5" y1="1" x2="0.5" y2="0">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="40%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="can-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <clipPath id="roundedSquare">
+      <rect x="0" y="0" width="600" height="600" rx="120" ry="120"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background: rounded square -->
+  <rect width="600" height="600" rx="120" ry="120" fill="url(#bg-light)"/>
+
+  <!-- Trash can body -->
+  <g transform="translate(300, 310)">
+    <!-- Can body -->
+    <path d="M-70,20 L-60,130 Q-58,145 -42,145 L42,145 Q58,145 60,130 L70,20 Z" fill="url(#can-grad)" stroke="#1e293b" stroke-width="3"/>
+    <!-- Can lid -->
+    <rect x="-80" y="0" width="160" height="22" rx="6" fill="#64748b" stroke="#1e293b" stroke-width="3"/>
+    <!-- Lid handle -->
+    <rect x="-20" y="-12" width="40" height="14" rx="5" fill="#94a3b8" stroke="#1e293b" stroke-width="2"/>
+    <!-- Can lines -->
+    <line x1="-30" y1="50" x2="-25" y2="120" stroke="#1e293b" stroke-width="2" opacity="0.3"/>
+    <line x1="0" y1="45" x2="0" y2="125" stroke="#1e293b" stroke-width="2" opacity="0.3"/>
+    <line x1="30" y1="50" x2="25" y2="120" stroke="#1e293b" stroke-width="2" opacity="0.3"/>
+  </g>
+
+  <!-- Flame above can -->
+  <g transform="translate(300, 220)">
+    <!-- Main flame -->
+    <path d="M0,-120 C-15,-80 -45,-60 -50,-20 C-55,25 -30,50 0,55 C30,50 55,25 50,-20 C45,-60 15,-80 0,-120 Z" fill="url(#flame-grad)" opacity="0.95"/>
+    <!-- Inner flame -->
+    <path d="M0,-70 C-8,-45 -25,-35 -25,-5 C-25,18 -12,30 0,32 C12,30 25,18 25,-5 C25,-35 8,-45 0,-70 Z" fill="#fef3c7" opacity="0.85"/>
+    <!-- Flame core -->
+    <ellipse cx="0" cy="10" rx="10" ry="14" fill="#ffffff" opacity="0.6"/>
+  </g>
+
+  <!-- Angry face on flame -->
+  <g transform="translate(300, 185)">
+    <!-- Left eye (angry slant) -->
+    <path d="M-18,-8 L-10,-14 L-10,-4 Z" fill="#1e293b" opacity="0.7"/>
+    <!-- Right eye (angry slant) -->
+    <path d="M18,-8 L10,-14 L10,-4 Z" fill="#1e293b" opacity="0.7"/>
+    <!-- Angry mouth -->
+    <path d="M-12,8 Q0,2 12,8" stroke="#1e293b" stroke-width="2.5" fill="none" opacity="0.6" stroke-linecap="round"/>
+  </g>
+
+  <!-- Brand text -->
+  <text x="300" y="520" text-anchor="middle" font-family="'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif" font-size="52" font-weight="700" fill="#1e293b" letter-spacing="4">욕바지</text>
+  <text x="300" y="555" text-anchor="middle" font-family="'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif" font-size="18" font-weight="400" fill="#64748b" letter-spacing="6">YOKBAJI</text>
+</svg>

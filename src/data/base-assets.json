@@ -1,0 +1,14 @@
+[
+  { "code": "F_SARCASTIC_01", "gender": "F", "personality": "SARCASTIC", "number": "01", "video_path": "assets/base-videos/F_SARCASTIC_01.mp4" },
+  { "code": "F_SARCASTIC_02", "gender": "F", "personality": "SARCASTIC", "number": "02", "video_path": "assets/base-videos/F_SARCASTIC_02.mp4" },
+  { "code": "F_SARCASTIC_03", "gender": "F", "personality": "SARCASTIC", "number": "03", "video_path": "assets/base-videos/F_SARCASTIC_03.mp4" },
+  { "code": "M_ANGRY_01", "gender": "M", "personality": "ANGRY", "number": "01", "video_path": "assets/base-videos/M_ANGRY_01.mp4" },
+  { "code": "M_ANGRY_02", "gender": "M", "personality": "ANGRY", "number": "02", "video_path": "assets/base-videos/M_ANGRY_02.mp4" },
+  { "code": "M_ANGRY_03", "gender": "M", "personality": "ANGRY", "number": "03", "video_path": "assets/base-videos/M_ANGRY_03.mp4" },
+  { "code": "N_STOIC_01", "gender": "N", "personality": "STOIC", "number": "01", "video_path": "assets/base-videos/N_STOIC_01.mp4" },
+  { "code": "N_STOIC_02", "gender": "N", "personality": "STOIC", "number": "02", "video_path": "assets/base-videos/N_STOIC_02.mp4" },
+  { "code": "N_STOIC_03", "gender": "N", "personality": "STOIC", "number": "03", "video_path": "assets/base-videos/N_STOIC_03.mp4" },
+  { "code": "N_WEAK_01", "gender": "N", "personality": "WEAK", "number": "01", "video_path": "assets/base-videos/N_WEAK_01.mp4" },
+  { "code": "N_WEAK_02", "gender": "N", "personality": "WEAK", "number": "02", "video_path": "assets/base-videos/N_WEAK_02.mp4" },
+  { "code": "N_WEAK_03", "gender": "N", "personality": "WEAK", "number": "03", "video_path": "assets/base-videos/N_WEAK_03.mp4" }
+]

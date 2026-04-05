@@ -70,8 +70,8 @@ export async function generateReactionVideo(
     MODEL_VERSION as `${string}/${string}:${string}`,
     {
       input: {
-        image: imageDataUri,
-        video: videoDataUri,
+        source_image: imageDataUri,
+        driving_video: videoDataUri,
       },
     }
   );

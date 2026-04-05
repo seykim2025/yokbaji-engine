@@ -156,7 +156,7 @@ app.post("/api/reactions", async (req, res) => {
 });
 
 // SPA fallback — serve index.html for non-API routes
-app.get("*", (_req, res) => {
+app.get("/{*path}", (_req, res) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
 

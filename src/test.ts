@@ -43,7 +43,7 @@ async function runTests() {
     console.log("[setup] Created placeholder test image");
   }
 
-  const character = createCharacter({
+  const character = await createCharacter({
     image_path: testImagePath,
     personality_type: "WEAK",
     gender_type: "N",
@@ -54,7 +54,7 @@ async function runTests() {
 
   // 3. Test character retrieval
   console.log("\n--- Test 3: Get character ---");
-  const retrieved = getCharacter(character.character_id);
+  const retrieved = await getCharacter(character.character_id);
   console.assert(retrieved !== null, "Should retrieve character");
   console.assert(
     retrieved!.personality_type === "WEAK",

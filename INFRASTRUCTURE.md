@@ -98,9 +98,10 @@ yokbaji-engine/
 │   ├── data/
 │   │   └── base-assets.json  # Asset metadata (12 base videos)
 │   ├── lib/
+│   │   ├── blob-storage.ts       # Storage abstraction (Vercel Blob / local fs)
 │   │   ├── replicate-client.ts   # Replicate API wrapper (zedge/live-portrait)
 │   │   ├── asset-selector.ts     # Base video selection logic
-│   │   ├── cache.ts              # File-based cache index (JSON)
+│   │   ├── cache.ts              # Persistent cache index (Blob-backed)
 │   │   ├── dialogue-generator.ts # Dialogue generation (fallback mode)
 │   │   └── paths.ts              # Environment-aware path resolution
 │   ├── prompts/
@@ -193,6 +194,7 @@ The engine also serves its own minimal frontend at `public/index.html` for direc
 
 | Package    | Version  | Purpose                            |
 | ---------- | -------- | ---------------------------------- |
+| @vercel/blob | ^2.3.3 | Persistent file storage (Vercel Blob) |
 | express    | ^5.2.1   | HTTP server framework              |
 | multer     | ^2.1.1   | Multipart file upload handling     |
 | replicate  | ^1.0.1   | Replicate API client               |
@@ -206,6 +208,7 @@ The engine also serves its own minimal frontend at `public/index.html` for direc
 | ------------------------------ | -------- | -------------------------------------------- |
 | `REPLICATE_API_TOKEN`          | Yes      | Replicate API authentication token            |
 | `YOKBAJI_REPLICATE_API_TOKEN`  | No       | Alternative env var name (checked first)      |
+| `BLOB_READ_WRITE_TOKEN`        | Yes (prod) | Vercel Blob storage token (auto-set by Vercel Blob integration) |
 | `VERCEL`                       | Auto     | Set automatically by Vercel runtime           |
 
 - Secrets are managed via **Vercel Environment Variables** (not committed to git).
@@ -215,6 +218,27 @@ The engine also serves its own minimal frontend at `public/index.html` for direc
 
 ## 5. Storage Architecture
 
+The engine uses a **dual-mode storage abstraction** (`src/lib/blob-storage.ts`):
+- **Production (Vercel):** Vercel Blob — persistent, globally distributed file storage
+- **Local development:** Filesystem under `./storage/` (gitignored)
+
+The mode is determined by the presence of `BLOB_READ_WRITE_TOKEN` env var.
+
+### Vercel Blob (Production)
+
+All persistent data is stored in Vercel Blob with public access:
+
+| Data | Blob Path | Content Type |
+|------|-----------|-------------|
+| Face images | `characters/{id}/source.jpg` | image/jpeg |
+| Character metadata | `characters/{id}/meta.json` | application/json |
+| Generated videos | `generated/{charId}/{code}.mp4` | video/mp4 |
+| Cache index | `cache-index.json` | application/json |
+
+- **Uploads:** User images are received via multer to `/tmp`, then immediately uploaded to Blob. The Blob URL is stored in character metadata.
+- **Generated videos:** Downloaded from Replicate, uploaded to Blob. The Blob URL is stored in the cache index and returned directly to the frontend.
+- **No local file serving needed in production** — all URLs are public Blob URLs.
+
 ### Local Development
 
 - **Writable storage:** `./storage/` (gitignored)
@@ -223,32 +247,21 @@ The engine also serves its own minimal frontend at `public/index.html` for direc
   - `storage/characters/{id}/source.jpg` — Copied user face images
   - `storage/generated/{id}/{code}.mp4` — Generated reaction videos
   - `storage/cache-index.json` — Cache index mapping character+asset to video paths
-
-### Vercel Production
-
-- **Writable storage:** `/tmp/yokbaji-storage/` (ephemeral)
-  - Same directory structure as local, but under `/tmp`
-  - **Ephemeral:** Data is lost between function invocations and cold starts
-  - **No persistent storage is configured** — this is a known limitation for production
-
-### Storage Limitation (Production)
-
-> **Critical:** On Vercel, `/tmp` is ephemeral. Generated videos, character data, and cache are lost between cold starts. A persistent storage solution (e.g., Vercel Blob, S3, or a database) is needed before production launch.
+- Local file paths are converted to `/storage/...` serving URLs by Express static middleware.
 
 ---
 
 ## 6. Caching Strategy
 
-The engine implements a **file-based cache** (`src/lib/cache.ts`):
+The engine implements a **persistent cache** (`src/lib/cache.ts`):
 
-- **Cache index:** JSON file at `{storageDir}/cache-index.json`
+- **Cache index:** JSON file stored in Vercel Blob (production) or `{storageDir}/cache-index.json` (local)
 - **Key format:** `{character_id}:{base_asset_code}`
-- **Cache hit:** Returns previously generated video path (skips Replicate API call)
-- **Cache miss:** Calls Replicate, downloads video, stores in generated directory, updates cache
+- **Cache hit:** Returns previously generated video URL (skips Replicate API call)
+- **Cache miss:** Calls Replicate, downloads video, uploads to Blob, updates cache
 - **Exhaustion handling:** When all base assets for a personality+gender are used, randomly reuses a cached result
-- **File existence check:** Cache entries are invalidated if the video file no longer exists
-
-> **Note:** Cache is only effective within a single Vercel function instance lifetime due to ephemeral `/tmp` storage.
+- **In-memory optimization:** Cache index is held in memory within a function instance to reduce Blob reads
+- **Persistence:** With Vercel Blob, cache survives cold starts and function instance recycling
 
 ---
 
@@ -264,10 +277,15 @@ The engine implements a **file-based cache** (`src/lib/cache.ts`):
 
 | Issue                          | Severity | Notes                                            |
 | ------------------------------ | -------- | ------------------------------------------------ |
-| Ephemeral `/tmp` storage       | Critical | No persistent storage for characters or videos   |
-| No database                    | High     | Character data is file-based, lost on cold start |
 | No authentication              | High     | API endpoints are publicly accessible             |
 | No rate limiting               | Medium   | Replicate API calls are expensive                 |
 | Dialogue is static fallback    | Medium   | LLM integration not yet wired                    |
 | `sharp` imported but unused    | Low      | Listed as dependency, not used in core flow       |
 | Single-region deployment       | Low      | Default Vercel region only                        |
+
+### Resolved (v0.2.0)
+
+| Issue                          | Resolution                                       |
+| ------------------------------ | ------------------------------------------------ |
+| Ephemeral `/tmp` storage       | Migrated to Vercel Blob for persistent storage   |
+| No database                    | Character metadata stored in Vercel Blob as JSON |

@@ -1,6 +1,7 @@
 import Replicate from "replicate";
 import * as fs from "fs";
 import * as path from "path";
+import { downloadFile } from "./blob-storage";
 
 const MODEL_VERSION =
   "zedge/live-portrait:9f8f5880eb2db3778cc689fa00ee6e090fa3d8388ac278b608d4cc526a44c5df";
@@ -27,7 +28,7 @@ function getClient(): Replicate {
 }
 
 export interface LivePortraitInput {
-  source_image_path: string; // local path to user's face image
+  source_image_path: string; // local path OR Blob URL to user's face image
   driving_video_path: string; // local path to base driving video
 }
 
@@ -35,30 +36,45 @@ export interface LivePortraitOutput {
   video_url: string; // URL of generated video from Replicate
 }
 
+/**
+ * Read a file from either a local path or a remote URL and return a base64 data URI.
+ */
+async function toDataUri(
+  pathOrUrl: string,
+  defaultMime: string
+): Promise<string> {
+  const buffer = await downloadFile(pathOrUrl);
+  const ext = path.extname(pathOrUrl).slice(1).toLowerCase();
+
+  let mime = defaultMime;
+  if (ext === "png") mime = "image/png";
+  else if (ext === "jpg" || ext === "jpeg") mime = "image/jpeg";
+  else if (ext === "mp4") mime = "video/mp4";
+
+  return `data:${mime};base64,${buffer.toString("base64")}`;
+}
+
 export async function generateReactionVideo(
   input: LivePortraitInput
 ): Promise<LivePortraitOutput> {
   const client = getClient();
 
-  // Read files and create data URIs for Replicate
-  const imageBuffer = fs.readFileSync(input.source_image_path);
-  const imageExt = path.extname(input.source_image_path).slice(1) || "jpg";
-  const imageMime = imageExt === "png" ? "image/png" : "image/jpeg";
-  const imageDataUri = `data:${imageMime};base64,${imageBuffer.toString("base64")}`;
-
-  const videoBuffer = fs.readFileSync(input.driving_video_path);
-  const videoDataUri = `data:video/mp4;base64,${videoBuffer.toString("base64")}`;
+  const imageDataUri = await toDataUri(input.source_image_path, "image/jpeg");
+  const videoDataUri = await toDataUri(input.driving_video_path, "video/mp4");
 
   console.log(
     `[replicate] Calling live-portrait with image=${input.source_image_path}, video=${input.driving_video_path}`
   );
 
-  const output = await client.run(MODEL_VERSION as `${string}/${string}:${string}`, {
-    input: {
-      image: imageDataUri,
-      video: videoDataUri,
-    },
-  });
+  const output = await client.run(
+    MODEL_VERSION as `${string}/${string}:${string}`,
+    {
+      input: {
+        image: imageDataUri,
+        video: videoDataUri,
+      },
+    }
+  );
 
   // Output is typically a URL string or object with url
   let videoUrl: string;
@@ -66,8 +82,11 @@ export async function generateReactionVideo(
     videoUrl = output;
   } else if (output && typeof output === "object" && "url" in (output as any)) {
     videoUrl = (output as any).url;
-  } else if (output && typeof output === "object" && Symbol.iterator in (output as any)) {
-    // Could be a ReadableStream or iterator; grab first element
+  } else if (
+    output &&
+    typeof output === "object" &&
+    Symbol.iterator in (output as any)
+  ) {
     const arr = Array.isArray(output) ? output : [];
     videoUrl = typeof arr[0] === "string" ? arr[0] : String(output);
   } else {
@@ -85,7 +104,9 @@ export async function downloadVideo(
 ): Promise<void> {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to download video: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Failed to download video: ${response.status} ${response.statusText}`
+    );
   }
   const buffer = Buffer.from(await response.arrayBuffer());
   fs.mkdirSync(path.dirname(destPath), { recursive: true });

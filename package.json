@@ -1,6 +1,6 @@
 {
   "name": "yokbaji-reaction-engine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Yokbaji Reaction GIF Engine - face swap + personality-based dialogue",
   "main": "dist/index.js",
   "scripts": {
@@ -10,6 +10,7 @@
     "test": "tsx src/test.ts"
   },
   "dependencies": {
+    "@vercel/blob": "^2.3.3",
     "express": "^5.2.1",
     "multer": "^2.1.1",
     "replicate": "^1.0.1",

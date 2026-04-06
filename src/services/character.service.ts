@@ -8,6 +8,7 @@ import {
   uploadJson,
   downloadJson,
   listFiles,
+  deleteFile,
   isUsingBlobStorage,
 } from "../lib/blob-storage";
 
@@ -74,6 +75,30 @@ export async function getCharacter(
 export async function updateCharacter(meta: CharacterMeta): Promise<void> {
   const metaBlobPath = `characters/${meta.character_id}/meta.json`;
   await uploadJson(metaBlobPath, meta);
+}
+
+export async function deleteCharacter(characterId: string): Promise<void> {
+  // Delete all files under the character's prefix (source image, meta.json, etc.)
+  const files = await listFiles(`characters/${characterId}/`);
+  for (const file of files) {
+    await deleteFile(file);
+  }
+
+  // Also delete generated reaction videos
+  const generatedFiles = await listFiles(`generated/${characterId}/`);
+  for (const file of generatedFiles) {
+    await deleteFile(file);
+  }
+
+  // Local fallback: remove directory
+  if (!isUsingBlobStorage()) {
+    const charDir = path.join(CHARACTERS_DIR, characterId);
+    if (fs.existsSync(charDir)) {
+      fs.rmSync(charDir, { recursive: true, force: true });
+    }
+  }
+
+  console.log(`[character] Deleted ${characterId}`);
 }
 
 export async function listCharacters(): Promise<CharacterMeta[]> {

@@ -6,6 +6,7 @@ import {
   createCharacter,
   getCharacter,
   listCharacters,
+  deleteCharacter,
 } from "./services/character.service";
 import { generateReaction } from "./services/reaction.service";
 import { loadBaseAssets } from "./lib/asset-selector";
@@ -54,15 +55,35 @@ app.get("/health", (_req, res) => {
   });
 });
 
-// List base assets
-app.get("/api/assets", (_req, res) => {
+// List base assets (supports ?personality=WEAK&gender=F filtering with N-gender fallback)
+app.get("/api/assets", (req, res) => {
   try {
     const assets = loadBaseAssets();
     // Return URL-safe paths instead of server-local filesystem paths
-    const safeAssets = assets.map((a) => ({
+    let safeAssets = assets.map((a) => ({
       ...a,
       video_path: `/assets/base-videos/${a.code}.mp4`,
     }));
+
+    const { personality, gender } = req.query;
+    if (personality && gender) {
+      // Filter by personality and gender, with N (neutral) fallback
+      const exact = safeAssets.filter(
+        (a) =>
+          a.personality === personality &&
+          (a.gender === gender || a.gender === "N")
+      );
+      // Prefer exact gender match, fall back to N
+      const exactGender = exact.filter((a) => a.gender === gender);
+      safeAssets = exactGender.length > 0 ? exactGender : exact;
+    } else if (personality) {
+      safeAssets = safeAssets.filter((a) => a.personality === personality);
+    } else if (gender) {
+      safeAssets = safeAssets.filter(
+        (a) => a.gender === gender || a.gender === "N"
+      );
+    }
+
     res.json({ assets: safeAssets, count: safeAssets.length });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -137,6 +158,21 @@ app.get("/api/characters/:id", async (req, res) => {
       return;
     }
     res.json(character);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete character by ID
+app.delete("/api/characters/:id", async (req, res) => {
+  try {
+    const character = await getCharacter(req.params.id);
+    if (!character) {
+      res.status(404).json({ error: "Character not found" });
+      return;
+    }
+    await deleteCharacter(req.params.id);
+    res.json({ deleted: true, character_id: req.params.id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

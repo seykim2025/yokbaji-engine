@@ -1,7 +1,7 @@
 import Replicate from "replicate";
 import * as fs from "fs";
 import * as path from "path";
-import { downloadFile, uploadFile } from "./blob-storage";
+import { downloadFile } from "./blob-storage";
 
 const MODEL_VERSION =
   "zedge/live-portrait:9f8f5880eb2db3778cc689fa00ee6e090fa3d8388ac278b608d4cc526a44c5df";
@@ -36,10 +36,13 @@ export interface LivePortraitOutput {
   video_url: string; // URL of generated video from Replicate
 }
 
+// Cache uploaded driving video URLs so we don't re-upload static assets
+const _uploadedUrls = new Map<string, string>();
+
 /**
  * Ensure a file input is available as a public URL that Replicate can fetch.
  * If it's already an HTTP(S) URL, return it directly.
- * Otherwise, read it from disk and upload to Vercel Blob.
+ * Otherwise, read it from disk and upload to Vercel Blob (with overwrite).
  */
 async function ensurePublicUrl(
   pathOrUrl: string,
@@ -48,10 +51,31 @@ async function ensurePublicUrl(
   if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
     return pathOrUrl;
   }
+  const cached = _uploadedUrls.get(pathOrUrl);
+  if (cached) return cached;
+
   const buffer = await downloadFile(pathOrUrl);
   const basename = path.basename(pathOrUrl);
   const blobPath = `replicate-inputs/${basename}`;
-  return uploadFile(blobPath, buffer, contentType);
+
+  // Upload with overwrite since driving videos are static assets
+  let url: string;
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const { put } = await import("@vercel/blob");
+    const blob = await put(blobPath, buffer, {
+      access: "public",
+      contentType,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+    url = blob.url;
+  } else {
+    // Local fallback — just use the file path
+    url = pathOrUrl;
+  }
+
+  _uploadedUrls.set(pathOrUrl, url);
+  return url;
 }
 
 export async function generateReactionVideo(
@@ -76,22 +100,9 @@ export async function generateReactionVideo(
     }
   );
 
-  // Output is typically a URL string or object with url
-  let resultUrl: string;
-  if (typeof output === "string") {
-    resultUrl = output;
-  } else if (output && typeof output === "object" && "url" in (output as any)) {
-    resultUrl = (output as any).url;
-  } else if (
-    output &&
-    typeof output === "object" &&
-    Symbol.iterator in (output as any)
-  ) {
-    const arr = Array.isArray(output) ? output : [];
-    resultUrl = typeof arr[0] === "string" ? arr[0] : String(output);
-  } else {
-    resultUrl = String(output);
-  }
+  // The SDK returns a FileOutput (extends ReadableStream) whose toString()
+  // yields the raw URL string. Using String() handles all output shapes.
+  const resultUrl = String(output);
 
   console.log(`[replicate] Got result: ${resultUrl}`);
 

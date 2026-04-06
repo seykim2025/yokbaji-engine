@@ -37,21 +37,23 @@ export interface LivePortraitOutput {
 }
 
 /**
- * Read a file from either a local path or a remote URL and return a base64 data URI.
+ * Read a file from either a local path or a remote URL and return a File
+ * object that the Replicate SDK can auto-upload via the files API.
  */
-async function toDataUri(
+async function toFile(
   pathOrUrl: string,
   defaultMime: string
-): Promise<string> {
+): Promise<File> {
   const buffer = await downloadFile(pathOrUrl);
   const ext = path.extname(pathOrUrl).slice(1).toLowerCase();
+  const basename = path.basename(pathOrUrl);
 
   let mime = defaultMime;
   if (ext === "png") mime = "image/png";
   else if (ext === "jpg" || ext === "jpeg") mime = "image/jpeg";
   else if (ext === "mp4") mime = "video/mp4";
 
-  return `data:${mime};base64,${buffer.toString("base64")}`;
+  return new File([buffer], basename, { type: mime });
 }
 
 export async function generateReactionVideo(
@@ -59,8 +61,8 @@ export async function generateReactionVideo(
 ): Promise<LivePortraitOutput> {
   const client = getClient();
 
-  const imageDataUri = await toDataUri(input.source_image_path, "image/jpeg");
-  const videoDataUri = await toDataUri(input.driving_video_path, "video/mp4");
+  const imageFile = await toFile(input.source_image_path, "image/jpeg");
+  const videoFile = await toFile(input.driving_video_path, "video/mp4");
 
   console.log(
     `[replicate] Calling live-portrait with image=${input.source_image_path}, video=${input.driving_video_path}`
@@ -70,8 +72,8 @@ export async function generateReactionVideo(
     MODEL_VERSION as `${string}/${string}:${string}`,
     {
       input: {
-        source_image: imageDataUri,
-        driving_video: videoDataUri,
+        source_image: imageFile,
+        driving_video: videoFile,
       },
     }
   );

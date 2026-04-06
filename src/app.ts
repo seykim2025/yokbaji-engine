@@ -58,7 +58,12 @@ app.get("/health", (_req, res) => {
 app.get("/api/assets", (_req, res) => {
   try {
     const assets = loadBaseAssets();
-    res.json({ assets, count: assets.length });
+    // Return URL-safe paths instead of server-local filesystem paths
+    const safeAssets = assets.map((a) => ({
+      ...a,
+      video_path: `/assets/base-videos/${a.code}.mp4`,
+    }));
+    res.json({ assets: safeAssets, count: safeAssets.length });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

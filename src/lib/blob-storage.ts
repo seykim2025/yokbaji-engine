@@ -35,6 +35,8 @@ export async function uploadFile(
     const { put } = await getBlobModule();
     const blob = await put(blobPath, data, {
       access: "public",
+      addRandomSuffix: false,
+      allowOverwrite: true,
       ...(contentType ? { contentType } : {}),
     });
     return blob.url;

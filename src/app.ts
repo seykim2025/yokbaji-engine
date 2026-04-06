@@ -14,6 +14,19 @@ import type { Personality, Gender } from "./types";
 import { getStorageDir, getAssetsDir } from "./lib/paths";
 
 const app = express();
+
+// CORS — allow cross-origin requests from the Toss frontend
+app.use((req, res, next) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+});
+
 app.use(express.json());
 
 // Static file serving for generated videos and storage (local dev only)

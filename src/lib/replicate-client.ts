@@ -65,18 +65,28 @@ export async function generateReactionVideo(
   const videoFile = await toFile(input.driving_video_path, "video/mp4");
 
   console.log(
-    `[replicate] Calling live-portrait with image=${input.source_image_path}, video=${input.driving_video_path}`
+    `[replicate] source_image: name=${imageFile.name}, size=${imageFile.size}, type=${imageFile.type}`
+  );
+  console.log(
+    `[replicate] driving_video: name=${videoFile.name}, size=${videoFile.size}, type=${videoFile.type}`
   );
 
-  const output = await client.run(
-    MODEL_VERSION as `${string}/${string}:${string}`,
-    {
-      input: {
-        source_image: imageFile,
-        driving_video: videoFile,
-      },
-    }
-  );
+  let output;
+  try {
+    output = await client.run(
+      MODEL_VERSION as `${string}/${string}:${string}`,
+      {
+        input: {
+          source_image: imageFile,
+          driving_video: videoFile,
+        },
+      }
+    );
+  } catch (err: any) {
+    console.error(`[replicate] API error:`, err.message);
+    console.error(`[replicate] Full error:`, JSON.stringify(err, Object.getOwnPropertyNames(err)));
+    throw err;
+  }
 
   // Output is typically a URL string or object with url
   let videoUrl: string;

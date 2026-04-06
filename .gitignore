@@ -8,5 +8,5 @@ storage/
 comment.json
 review.json
 update.json
-
 .vercel
+.env*.local

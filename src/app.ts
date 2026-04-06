@@ -173,6 +173,50 @@ app.post("/api/reactions", async (req, res) => {
   }
 });
 
+// Debug: check Replicate model schema and file accessibility
+app.get("/api/debug/replicate", async (_req, res) => {
+  try {
+    const Replicate = (await import("replicate")).default;
+    const token = process.env.YOKBAJI_REPLICATE_API_TOKEN || process.env.REPLICATE_API_TOKEN;
+    if (!token) {
+      res.json({ error: "No Replicate API token configured" });
+      return;
+    }
+    const client = new Replicate({ auth: token });
+
+    // Check model version schema
+    const modelVersion = await client.models.versions.get(
+      "zedge",
+      "live-portrait",
+      "9f8f5880eb2db3778cc689fa00ee6e090fa3d8388ac278b608d4cc526a44c5df"
+    );
+    const inputSchema = (modelVersion as any)?.openapi_schema?.components?.schemas?.Input;
+
+    // Check latest version
+    const model = await client.models.get("zedge", "live-portrait");
+    const latestVersion = (model as any)?.latest_version?.id;
+
+    // Check if video files exist
+    const assets = loadBaseAssets();
+    const fileChecks = assets.slice(0, 2).map((a: any) => ({
+      code: a.code,
+      path: a.video_path,
+      exists: fs.existsSync(a.video_path),
+      size: fs.existsSync(a.video_path) ? fs.statSync(a.video_path).size : 0,
+    }));
+
+    res.json({
+      configuredVersion: "9f8f5880eb2db3778cc689fa00ee6e090fa3d8388ac278b608d4cc526a44c5df",
+      latestVersion,
+      versionMatch: latestVersion === "9f8f5880eb2db3778cc689fa00ee6e090fa3d8388ac278b608d4cc526a44c5df",
+      inputSchema,
+      fileChecks,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
 // SPA fallback — serve index.html for non-API routes
 app.get("/{*path}", (_req, res) => {
   res.sendFile(path.join(publicDir, "index.html"));

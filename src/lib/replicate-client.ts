@@ -1,7 +1,7 @@
 import Replicate from "replicate";
 import * as fs from "fs";
 import * as path from "path";
-import { downloadFile } from "./blob-storage";
+import { downloadFile, uploadFile } from "./blob-storage";
 
 const MODEL_VERSION =
   "zedge/live-portrait:9f8f5880eb2db3778cc689fa00ee6e090fa3d8388ac278b608d4cc526a44c5df";
@@ -37,23 +37,21 @@ export interface LivePortraitOutput {
 }
 
 /**
- * Read a file from either a local path or a remote URL and return a File
- * object that the Replicate SDK can auto-upload via the files API.
+ * Ensure a file input is available as a public URL that Replicate can fetch.
+ * If it's already an HTTP(S) URL, return it directly.
+ * Otherwise, read it from disk and upload to Vercel Blob.
  */
-async function toFile(
+async function ensurePublicUrl(
   pathOrUrl: string,
-  defaultMime: string
-): Promise<File> {
+  contentType: string
+): Promise<string> {
+  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
+    return pathOrUrl;
+  }
   const buffer = await downloadFile(pathOrUrl);
-  const ext = path.extname(pathOrUrl).slice(1).toLowerCase();
   const basename = path.basename(pathOrUrl);
-
-  let mime = defaultMime;
-  if (ext === "png") mime = "image/png";
-  else if (ext === "jpg" || ext === "jpeg") mime = "image/jpeg";
-  else if (ext === "mp4") mime = "video/mp4";
-
-  return new File([buffer], basename, { type: mime });
+  const blobPath = `replicate-inputs/${basename}`;
+  return uploadFile(blobPath, buffer, contentType);
 }
 
 export async function generateReactionVideo(
@@ -61,43 +59,43 @@ export async function generateReactionVideo(
 ): Promise<LivePortraitOutput> {
   const client = getClient();
 
-  const imageFile = await toFile(input.source_image_path, "image/jpeg");
-  const videoFile = await toFile(input.driving_video_path, "video/mp4");
+  const imageUrl = await ensurePublicUrl(input.source_image_path, "image/jpeg");
+  const videoUrl = await ensurePublicUrl(input.driving_video_path, "video/mp4");
 
   console.log(
-    `[replicate] Calling live-portrait with image=${input.source_image_path}, video=${input.driving_video_path}`
+    `[replicate] Calling live-portrait with image=${imageUrl}, video=${videoUrl}`
   );
 
   const output = await client.run(
     MODEL_VERSION as `${string}/${string}:${string}`,
     {
       input: {
-        source_image: imageFile,
-        driving_input: videoFile,
+        source_image: imageUrl,
+        driving_input: videoUrl,
       },
     }
   );
 
   // Output is typically a URL string or object with url
-  let videoUrl: string;
+  let resultUrl: string;
   if (typeof output === "string") {
-    videoUrl = output;
+    resultUrl = output;
   } else if (output && typeof output === "object" && "url" in (output as any)) {
-    videoUrl = (output as any).url;
+    resultUrl = (output as any).url;
   } else if (
     output &&
     typeof output === "object" &&
     Symbol.iterator in (output as any)
   ) {
     const arr = Array.isArray(output) ? output : [];
-    videoUrl = typeof arr[0] === "string" ? arr[0] : String(output);
+    resultUrl = typeof arr[0] === "string" ? arr[0] : String(output);
   } else {
-    videoUrl = String(output);
+    resultUrl = String(output);
   }
 
-  console.log(`[replicate] Got result: ${videoUrl}`);
+  console.log(`[replicate] Got result: ${resultUrl}`);
 
-  return { video_url: videoUrl };
+  return { video_url: resultUrl };
 }
 
 export async function downloadVideo(

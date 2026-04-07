@@ -66,6 +66,16 @@ app.use((req, _res, next) => {
   next();
 });
 
+// Health check — registered before static middleware to prevent express.static catch-all
+app.get(["/health", "/api/health"], (_req, res) => {
+  res.json({
+    status: "ok",
+    engine: "yokbaji-reaction-engine",
+    version: "0.2.0",
+    storage: isUsingBlobStorage() ? "blob" : "local",
+  });
+});
+
 // Static file serving for generated videos and storage (local dev only)
 const storageDir = getStorageDir();
 const assetsDir = getAssetsDir();
@@ -80,16 +90,6 @@ app.use(express.static(publicDir));
 const uploadDir = path.join(storageDir, "uploads");
 fs.mkdirSync(uploadDir, { recursive: true });
 const upload = multer({ dest: uploadDir });
-
-// Health check
-app.get(["/health", "/api/health"], (_req, res) => {
-  res.json({
-    status: "ok",
-    engine: "yokbaji-reaction-engine",
-    version: "0.2.0",
-    storage: isUsingBlobStorage() ? "blob" : "local",
-  });
-});
 
 // List base assets (supports ?personality=WEAK&gender=F filtering with N-gender fallback)
 app.get("/api/assets", (req, res) => {

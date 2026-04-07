@@ -60,6 +60,12 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Request logging
+app.use((req, _res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
 // Static file serving for generated videos and storage (local dev only)
 const storageDir = getStorageDir();
 const assetsDir = getAssetsDir();
@@ -76,7 +82,7 @@ fs.mkdirSync(uploadDir, { recursive: true });
 const upload = multer({ dest: uploadDir });
 
 // Health check
-app.get("/health", (_req, res) => {
+app.get(["/health", "/api/health"], (_req, res) => {
   res.json({
     status: "ok",
     engine: "yokbaji-reaction-engine",
@@ -243,5 +249,22 @@ app.post("/api/reactions", reactionRateLimiter, async (req, res) => {
 app.get("/{*path}", (_req, res) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
+
+// Global error handler — catches errors from next(err) calls
+app.use(
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    console.error(
+      `[${new Date().toISOString()}] ERROR ${req.method} ${req.path}:`,
+      err.message
+    );
+    const status = (err as any).status ?? 500;
+    res.status(status).json({ error: err.message ?? "Internal server error" });
+  }
+);
 
 export default app;

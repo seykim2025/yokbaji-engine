@@ -10,6 +10,7 @@
     "test": "tsx src/test.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@vercel/blob": "^2.3.3",
     "express": "^5.2.1",
     "multer": "^2.1.1",

@@ -84,6 +84,14 @@ ${userMessage}
 대사만 출력하라. 다른 설명은 금지.`;
 }
 
+export function getSystemPrompt(personalityType: Personality): string {
+  return `${SYSTEM_PROMPT}\n\n${SUB_PROMPTS[personalityType]}`;
+}
+
+export function getUserPrompt(baseAssetCode: string, userMessage: string): string {
+  return `[Base Asset]\n${baseAssetCode}\n\n[User Message]\n${userMessage}\n\n[Instruction]\n위 입력을 보고, 해당 캐릭터가 지금 이 순간 유저에게 직접 반응하는 대사를 생성하라.\n속 시원한 반응이 우선이며, 캐릭터 성격은 반드시 유지한다.\n대사만 출력하라. 다른 설명은 금지.`;
+}
+
 // Fallback dialogue lines when no LLM is available
 const FALLBACK_DIALOGUES: Record<Personality, string[]> = {
   WEAK: [

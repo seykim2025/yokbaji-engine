@@ -194,11 +194,11 @@ The engine also serves its own minimal frontend at `public/index.html` for direc
 
 | Package    | Version  | Purpose                            |
 | ---------- | -------- | ---------------------------------- |
+| @anthropic-ai/sdk | ^0.39.0 | Claude API client for dialogue generation |
 | @vercel/blob | ^2.3.3 | Persistent file storage (Vercel Blob) |
 | express    | ^5.2.1   | HTTP server framework              |
 | multer     | ^2.1.1   | Multipart file upload handling     |
 | replicate  | ^1.0.1   | Replicate API client               |
-| sharp      | ^0.34.5  | Image processing (available but not yet used in core flow) |
 
 ---
 
@@ -209,6 +209,7 @@ The engine also serves its own minimal frontend at `public/index.html` for direc
 | `REPLICATE_API_TOKEN`          | Yes      | Replicate API authentication token            |
 | `YOKBAJI_REPLICATE_API_TOKEN`  | No       | Alternative env var name (checked first)      |
 | `BLOB_READ_WRITE_TOKEN`        | Yes (prod) | Vercel Blob storage token (auto-set by Vercel Blob integration) |
+| `ANTHROPIC_API_KEY`            | No       | Anthropic API key for Claude dialogue generation; falls back to static lines if unset |
 | `VERCEL`                       | Auto     | Set automatically by Vercel runtime           |
 
 - Secrets are managed via **Vercel Environment Variables** (not committed to git).
@@ -267,9 +268,9 @@ The engine implements a **persistent cache** (`src/lib/cache.ts`):
 
 ## 7. Dialogue System
 
-- **Current state:** Fallback mode — returns random pre-written Korean dialogues per personality type
-- **Future state:** LLM prompt templates are fully defined in `src/prompts/reaction-dialogue.prompts.ts` and ready to be wired to an LLM API (e.g., Claude, OpenAI)
-- **Prompt design:** System prompt enforces short, direct, in-character Korean responses. Each personality type has specific behavioral rules and example lines.
+- **Current state:** LLM-powered — uses `claude-haiku-4-5-20251001` via Anthropic SDK to generate real-time, in-character Korean dialogue. Falls back to static lines if `ANTHROPIC_API_KEY` is not set or the API call fails.
+- **Prompt design:** System prompt + per-personality sub-prompt are passed as the `system` parameter. The base asset code and user message are the `user` turn. Enforces short, direct, in-character Korean responses.
+- **Fallback:** Pre-written lines per personality type in `src/prompts/reaction-dialogue.prompts.ts` — activated automatically on failure.
 
 ---
 
@@ -278,10 +279,14 @@ The engine implements a **persistent cache** (`src/lib/cache.ts`):
 | Issue                          | Severity | Notes                                            |
 | ------------------------------ | -------- | ------------------------------------------------ |
 | No authentication              | High     | API endpoints are publicly accessible             |
-| No rate limiting               | Medium   | Replicate API calls are expensive                 |
-| Dialogue is static fallback    | Medium   | LLM integration not yet wired                    |
-| `sharp` imported but unused    | Low      | Listed as dependency, not used in core flow       |
 | Single-region deployment       | Low      | Default Vercel region only                        |
+
+### Resolved (v0.3.0)
+
+| Issue                          | Resolution                                       |
+| ------------------------------ | ------------------------------------------------ |
+| Dialogue is static fallback    | Wired to `claude-haiku-4-5-20251001` via `ANTHROPIC_API_KEY`; graceful fallback if unset |
+| No rate limiting               | Per-character 30s cooldown on `POST /api/reactions` (in-memory, per instance) |
 
 ### Resolved (v0.2.0)
 

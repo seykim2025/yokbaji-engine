@@ -164,17 +164,73 @@ Gender variants: `M` (male), `F` (female), `N` (neutral/any).
 
 ---
 
-## 2. Main Yokbaji App (Frontend)
+## 2. Yokbaji Toss Service (`yokbaji-toss`)
 
-| Property            | Value                              |
-| ------------------- | ---------------------------------- |
-| Production URL      | https://default-rosy-seven.vercel.app |
-| Build Tool          | Vite                               |
-| Deployment Platform | Vercel                             |
+> **IMPORTANT:** This is a **separate repository and Vercel project** from `yokbaji-engine`. Deploying `yokbaji-engine` does NOT update this service. They must be deployed independently.
 
-The frontend is a standalone Vite-based SPA deployed separately on Vercel. It communicates with the Yokbaji Reaction Engine via its API endpoints.
+| Property            | Value                                            |
+| ------------------- | ------------------------------------------------ |
+| GitHub              | https://github.com/seykim2025/yokbaji-toss        |
+| Production URL      | https://yokbaji-toss.vercel.app (Toss platform)  |
+| Build Tool          | Vite + React 19 (TypeScript)                     |
+| Deployment Platform | Vercel (separate project: `yokbaji-toss`)         |
+| Backend API         | Calls `https://yokbaji-engine.vercel.app`         |
+| Configured via      | `VITE_API_URL` env var (defaults to engine URL)  |
 
-The engine also serves its own minimal frontend at `public/index.html` for direct testing.
+The Toss-facing frontend is a standalone React SPA deployed as its own Vercel project (`yokbaji-toss`). It communicates with the Yokbaji Reaction Engine via its public API endpoints.
+
+### Module Structure
+
+```
+yokbaji-toss/
+├── src/
+│   ├── api.ts              # All API calls to yokbaji-engine backend
+│   ├── App.tsx             # Root component, screen routing
+│   ├── types.ts            # Shared TypeScript types
+│   ├── index.css           # Global styles
+│   ├── main.tsx            # Entry point
+│   └── components/
+│       ├── HomeScreen.tsx  # Character list / entry
+│       ├── CreateScreen.tsx# Photo upload + personality selection
+│       ├── ChatScreen.tsx  # Send message to character
+│       └── ReactionScreen.tsx # Display reaction video + dialogue
+├── public/                 # Static assets
+├── index.html              # SPA shell
+├── vercel.json             # SPA routing rewrite
+├── vite.config.ts
+└── package.json
+```
+
+### Deployment (yokbaji-toss)
+
+```bash
+# Deploy preview
+vercel --cwd yokbaji-toss
+
+# Deploy to production
+vercel --cwd yokbaji-toss --prod
+```
+
+Set `VITE_API_URL` in the `yokbaji-toss` Vercel project environment variables to point to the engine.
+
+---
+
+## Project Separation Policy
+
+**There are two separate projects. Know which one you are working in.**
+
+| | `yokbaji-engine` | `yokbaji-toss` |
+|---|---|---|
+| Type | Backend API | Frontend (Toss platform) |
+| Language | TypeScript (Express.js) | TypeScript (React + Vite) |
+| Vercel project | `yokbaji-engine` | `yokbaji-toss` |
+| Deploy URL | https://yokbaji-engine.vercel.app | https://yokbaji-toss.vercel.app |
+| GitHub repo | seykim2025/yokbaji-engine | seykim2025/yokbaji-toss |
+| Workspace (Paperclip) | CTO workspace | QC Engineer workspace |
+
+**Rule:** Changes to the engine backend require deploying `yokbaji-engine`. Changes to the frontend UX require deploying `yokbaji-toss`. A full release requires both.
+
+The engine also serves its own minimal test frontend at `public/index.html` — this is for debugging only, not for Toss platform users.
 
 ---
 

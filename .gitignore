@@ -1,12 +1,11 @@
 node_modules/
 dist/
 storage/
-.vercel/
 *.log
 .env
 .env.*
 comment.json
 review.json
 update.json
-.vercel
 .env*.local
+.vercel/.env*.local

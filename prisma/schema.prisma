@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  M
+  F
+  N
+}
+
+enum Personality {
+  WEAK
+  ANGRY
+  SARCASTIC
+  STOIC
+}
+
+model characters {
+  id                     String          @id
+  session_id             String
+  image_path             String
+  personality_type       Personality
+  gender_type            Gender
+  name                   String?
+  used_base_numbers      String[]
+  generated_assets_count Int             @default(0)
+  created_at             DateTime        @default(now())
+  updated_at             DateTime        @updatedAt
+  cache_entries          cache_entries[]
+}
+
+model cache_entries {
+  id              String     @id
+  character_id    String
+  base_asset_code String
+  video_path      String
+  thumbnail_path  String?
+  created_at      DateTime   @default(now())
+  character       characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@unique([character_id, base_asset_code])
+}

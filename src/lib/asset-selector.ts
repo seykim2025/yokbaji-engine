@@ -7,6 +7,13 @@ const PROJECT_ROOT = getProjectRoot();
 const ASSETS_DIR = path.join(getAssetsDir(), "base-videos");
 const META_PATH = path.join(PROJECT_ROOT, "src/data/base-assets.json");
 
+/**
+ * Temporary fallback flag.
+ * Set to true once all 36 base videos are ready.
+ * When true, strict gender matching is enforced and the personality-first fallback is removed.
+ */
+const ASSETS_FULLY_STOCKED = false;
+
 let _assets: BaseAsset[] | null = null;
 
 export function loadBaseAssets(): BaseAsset[] {
@@ -51,44 +58,85 @@ export function loadBaseAssets(): BaseAsset[] {
   return _assets;
 }
 
-export function selectBaseAsset(
-  character: CharacterMeta
-): BaseAsset | null {
+export function selectBaseAsset(character: CharacterMeta): BaseAsset | null {
   const assets = loadBaseAssets();
 
-  // Filter by personality type and matching gender (with N fallback)
-  const candidates = assets.filter(
-    (a) =>
-      a.personality === character.personality_type &&
-      (a.gender === character.gender_type || a.gender === "N")
-  );
-
-  if (candidates.length === 0) return null;
-
-  // Prefer assets not yet used by this character
-  const unused = candidates.filter(
-    (a) => !character.used_base_numbers.includes(a.number)
-  );
-
-  if (unused.length > 0) {
-    // Prefer exact gender match over N fallback
-    const exactMatch = unused.filter(
-      (a) => a.gender === character.gender_type
+  if (ASSETS_FULLY_STOCKED) {
+    // Strict mode: exact gender + personality, with N-gender fallback
+    const candidates = assets.filter(
+      (a) =>
+        a.personality === character.personality_type &&
+        (a.gender === character.gender_type || a.gender === "N")
     );
-    const pool = exactMatch.length > 0 ? exactMatch : unused;
-    return pool[Math.floor(Math.random() * pool.length)];
+    if (candidates.length === 0) return null;
+    const unused = candidates.filter(
+      (a) => !character.used_base_numbers.includes(a.number)
+    );
+    if (unused.length > 0) {
+      const exactMatch = unused.filter((a) => a.gender === character.gender_type);
+      const pool = exactMatch.length > 0 ? exactMatch : unused;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+    return candidates[Math.floor(Math.random() * candidates.length)];
   }
 
-  // All exhausted — return random from all candidates (for cache reuse)
-  return candidates[Math.floor(Math.random() * candidates.length)];
+  // --- Temporary personality-first fallback (remove when ASSETS_FULLY_STOCKED = true) ---
+  // Step 1: Prefer exact gender + personality match
+  const exactCandidates = assets.filter(
+    (a) =>
+      a.personality === character.personality_type &&
+      a.gender === character.gender_type
+  );
+  const exactUnused = exactCandidates.filter(
+    (a) => !character.used_base_numbers.includes(a.number)
+  );
+  if (exactUnused.length > 0) {
+    return exactUnused[Math.floor(Math.random() * exactUnused.length)];
+  }
+  if (exactCandidates.length > 0) {
+    // All exact-gender assets used — cycle through them for cache reuse
+    return exactCandidates[Math.floor(Math.random() * exactCandidates.length)];
+  }
+
+  // Step 2: Personality-first fallback — same personality, any gender
+  // e.g. N_SARCASTIC_01 requested but only F_SARCASTIC_01 exists → use F_SARCASTIC_01
+  const personalityCandidates = assets.filter(
+    (a) => a.personality === character.personality_type
+  );
+  if (personalityCandidates.length === 0) return null;
+
+  const personalityUnused = personalityCandidates.filter(
+    (a) => !character.used_base_numbers.includes(a.number)
+  );
+  const pool =
+    personalityUnused.length > 0 ? personalityUnused : personalityCandidates;
+  const selected = pool[Math.floor(Math.random() * pool.length)];
+
+  console.log(
+    `[asset-selector] fallback: no ${character.gender_type}_${character.personality_type} assets available, ` +
+      `using ${selected.code} (personality-first fallback, active until 36 base videos are ready)`
+  );
+
+  return selected;
 }
 
 export function isExhausted(character: CharacterMeta): boolean {
   const assets = loadBaseAssets();
+
+  if (ASSETS_FULLY_STOCKED) {
+    const candidates = assets.filter(
+      (a) =>
+        a.personality === character.personality_type &&
+        (a.gender === character.gender_type || a.gender === "N")
+    );
+    return candidates.every((a) =>
+      character.used_base_numbers.includes(a.number)
+    );
+  }
+
+  // During fallback period, exhaustion checks all personality-matched assets
   const candidates = assets.filter(
-    (a) =>
-      a.personality === character.personality_type &&
-      (a.gender === character.gender_type || a.gender === "N")
+    (a) => a.personality === character.personality_type
   );
   return candidates.every((a) =>
     character.used_base_numbers.includes(a.number)

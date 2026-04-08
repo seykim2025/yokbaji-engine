@@ -71,7 +71,7 @@ app.get(["/health", "/api/health"], (_req, res) => {
   res.json({
     status: "ok",
     engine: "yokbaji-reaction-engine",
-    version: "0.2.0",
+    version: "0.0.1",
     storage: isUsingBlobStorage() ? "blob" : "local",
   });
 });

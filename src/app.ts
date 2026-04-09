@@ -72,6 +72,7 @@ app.get(["/health", "/api/health"], (_req, res) => {
     status: "ok",
     engine: "yokbaji-reaction-engine",
     version: "0.0.1",
+    env: process.env.NODE_ENV === "production" ? "dev" : "dev", // currently dev; switch to "prod" when prod env is separated
     storage: isUsingBlobStorage() ? "blob" : "local",
   });
 });

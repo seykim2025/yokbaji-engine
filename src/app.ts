@@ -13,6 +13,7 @@ import { loadBaseAssets } from "./lib/asset-selector";
 import { isUsingBlobStorage } from "./lib/blob-storage";
 import type { Personality, Gender } from "./types";
 import { getStorageDir, getAssetsDir } from "./lib/paths";
+import { exchangeAuthCode, verifyUnlinkCallback } from "./services/toss-login.service";
 
 const app = express();
 
@@ -244,6 +245,43 @@ app.post("/api/reactions", reactionRateLimiter, async (req, res) => {
     const status = err.message?.includes("not found") ? 404 : 500;
     res.status(status).json({ error: err.message });
   }
+});
+
+// Toss Login — exchange authorizationCode for userKey
+app.post("/api/auth/toss-login", async (req, res) => {
+  const { authorizationCode, referrer } = req.body ?? {};
+  if (!authorizationCode || !referrer) {
+    res.status(400).json({ errorCode: "INVALID_REQUEST", error: "authorizationCode and referrer are required" });
+    return;
+  }
+  try {
+    const result = await exchangeAuthCode(authorizationCode, referrer);
+    res.json(result);
+  } catch (err: unknown) {
+    const code = (err as { code?: string }).code;
+    if (code === "MTLS_NOT_CONFIGURED") {
+      res.status(503).json({ errorCode: "TOKEN_EXCHANGE_FAILED", error: "mTLS not configured — provide TOSS_MTLS_CERT and TOSS_MTLS_KEY env vars" });
+    } else if (code === "TOKEN_EXCHANGE_FAILED") {
+      res.status(502).json({ errorCode: "TOKEN_EXCHANGE_FAILED", error: "Toss token exchange failed" });
+    } else if (code === "USER_FETCH_FAILED") {
+      res.status(502).json({ errorCode: "USER_FETCH_FAILED", error: "Toss user fetch failed" });
+    } else {
+      res.status(500).json({ errorCode: "INTERNAL_ERROR", error: "Internal error" });
+    }
+  }
+});
+
+// Toss Login — unlink callback (called by Toss when user disconnects)
+app.post("/api/auth/unlink", (req, res) => {
+  const authHeader = req.headers.authorization ?? "";
+  if (!verifyUnlinkCallback(authHeader)) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const { userKey, referrer } = req.body ?? {};
+  console.log(`[toss-unlink] userKey=${userKey} referrer=${referrer}`);
+  // No persistent session store yet; log only and return 200
+  res.json({ ok: true });
 });
 
 // SPA fallback — serve index.html for non-API routes

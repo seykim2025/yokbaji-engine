@@ -266,6 +266,11 @@ The engine also serves its own minimal test frontend at `public/index.html` — 
 | `YOKBAJI_REPLICATE_API_TOKEN`  | No       | Alternative env var name (checked first)      |
 | `BLOB_READ_WRITE_TOKEN`        | Yes (prod) | Vercel Blob storage token (auto-set by Vercel Blob integration) |
 | `ANTHROPIC_API_KEY`            | No       | Anthropic API key for Claude dialogue generation; falls back to static lines if unset |
+| `TOSS_MTLS_CERT`               | Yes (prod) | PEM-encoded mTLS client certificate for Toss API (`-----BEGIN CERTIFICATE-----` format) |
+| `TOSS_MTLS_KEY`                | Yes (prod) | PEM-encoded mTLS private key for Toss API (`-----BEGIN PRIVATE KEY-----` format) |
+| `TOSS_DECRYPT_KEY`             | No       | Base64-encoded AES-256 key for decrypting Toss user name field |
+| `TOSS_DECRYPT_AAD`             | No       | AAD string for AES-256-GCM decryption of Toss user name |
+| `TOSS_UNLINK_BASIC_AUTH`       | No       | Expected Basic Auth credential for Toss unlink callback; if unset, all unlink calls are accepted |
 | `VERCEL`                       | Auto     | Set automatically by Vercel runtime           |
 
 - Secrets are managed via **Vercel Environment Variables** (not committed to git).

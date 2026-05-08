@@ -5,11 +5,16 @@ const TOSS_API_BASE = "https://apps-in-toss-api.toss.im";
 const TOKEN_PATH = "/api-partner/v1/apps-in-toss/user/oauth2/generate-token";
 const USER_PATH = "/api-partner/v1/apps-in-toss/user/oauth2/login-me";
 
+function normalizePem(value: string): string {
+  // Vercel injects multiline env vars with literal \n sequences; restore real newlines
+  return value.includes("\\n") ? value.replace(/\\n/g, "\n") : value;
+}
+
 function getMtlsAgent(): https.Agent | undefined {
   const cert = process.env.TOSS_MTLS_CERT;
   const key = process.env.TOSS_MTLS_KEY;
   if (!cert || !key) return undefined;
-  return new https.Agent({ cert, key });
+  return new https.Agent({ cert: normalizePem(cert), key: normalizePem(key) });
 }
 
 function httpsPost(path: string, body: object, agent: https.Agent): Promise<{ status: number; data: unknown }> {

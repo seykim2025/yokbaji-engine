@@ -47,6 +47,10 @@ export interface ReactionResult {
 export interface ReactionRequest {
   character_id: string;
   user_message: string;
+  /** FE-managed: full base asset codes already used, e.g. ["F_ANGRY_01", "F_ANGRY_02"] */
+  used_base_codes?: string[];
+  /** FE-managed: already-generated video URLs keyed by base asset code */
+  cached_video_urls?: Record<string, string>;
 }
 
 export interface CharacterCreateRequest {

@@ -18,53 +18,41 @@ export async function generateReaction(
     throw new Error(`Character not found: ${req.character_id}`);
   }
 
-  // 1. Select base asset
-  const asset = selectBaseAsset(character);
+  const { used_base_codes, cached_video_urls } = req;
+
+  // 1. Select base asset (FE-provided used codes take precedence)
+  const asset = selectBaseAsset(character, used_base_codes);
   if (!asset) {
     throw new Error(
       `No base assets found for ${character.personality_type}/${character.gender_type}`
     );
   }
 
-  const exhausted = isExhausted(character);
+  const exhausted = isExhausted(character, used_base_codes);
   let videoUrl: string;
   let cached = false;
 
-  // 2. Check cache
-  const cachedEntry = await getCached(character.character_id, asset.code);
-
-  if (cachedEntry) {
-    // Cache hit — reuse
-    videoUrl = cachedEntry.video_path;
+  // 2. FE cache check — highest priority
+  if (cached_video_urls && cached_video_urls[asset.code]) {
+    videoUrl = cached_video_urls[asset.code];
     cached = true;
-    console.log(`[reaction] Cache hit: ${asset.code}`);
-  } else if (exhausted) {
-    // All base assets exhausted — reuse random cached result
-    const randomCached = await getRandomCached(character.character_id);
-    if (randomCached) {
-      videoUrl = randomCached.video_path;
+    console.log(`[reaction] FE cache hit: ${asset.code}`);
+  } else if (exhausted && cached_video_urls) {
+    // All 3 base actions exhausted — pick random from FE's cached URLs
+    const urls = Object.values(cached_video_urls);
+    if (urls.length > 0) {
+      videoUrl = urls[Math.floor(Math.random() * urls.length)];
       cached = true;
-      console.log(
-        `[reaction] Exhausted, reusing cached: ${randomCached.base_asset_code}`
-      );
+      console.log(`[reaction] Exhausted, reusing FE-cached result`);
     } else {
-      // No cache at all, must generate even if exhausted
-      videoUrl = await callReplicateAndSave(
-        character.character_id,
-        character.image_path,
-        asset
-      );
+      videoUrl = await resolveVideoUrl(character, asset, exhausted);
+      cached = videoUrl !== "";
     }
   } else {
-    // Generate new
-    videoUrl = await callReplicateAndSave(
-      character.character_id,
-      character.image_path,
-      asset
-    );
+    videoUrl = await resolveVideoUrl(character, asset, exhausted);
 
-    // Update used_base_numbers
-    if (!character.used_base_numbers.includes(asset.number)) {
+    // Update server-side used_base_numbers when generating new
+    if (!cached && !character.used_base_numbers.includes(asset.number)) {
       character.used_base_numbers.push(asset.number);
       character.generated_assets_count++;
       await updateCharacter(character);
@@ -95,6 +83,34 @@ export async function generateReaction(
   return result;
 }
 
+/** Resolve video URL via server-side cache or Replicate generation. */
+async function resolveVideoUrl(
+  character: { character_id: string; image_path: string; personality_type: string; gender_type: string; used_base_numbers: string[]; generated_assets_count: number },
+  asset: { code: string; video_path: string; number: string },
+  exhausted: boolean
+): Promise<string> {
+  // Server-side cache check
+  const cachedEntry = await getCached(character.character_id, asset.code);
+  if (cachedEntry) {
+    console.log(`[reaction] Server cache hit: ${asset.code}`);
+    return cachedEntry.video_path;
+  }
+
+  // Exhausted with no specific cache for this asset — pick any cached result
+  if (exhausted) {
+    const randomCached = await getRandomCached(character.character_id);
+    if (randomCached) {
+      console.log(
+        `[reaction] Exhausted, reusing server-cached: ${randomCached.base_asset_code}`
+      );
+      return randomCached.video_path;
+    }
+  }
+
+  // Generate new via Replicate
+  return callReplicateAndSave(character.character_id, character.image_path, asset);
+}
+
 async function callReplicateAndSave(
   characterId: string,
   imagePath: string,
@@ -120,7 +136,7 @@ async function callReplicateAndSave(
   const blobPath = `generated/${characterId}/${asset.code}.mp4`;
   const storedUrl = await uploadFile(blobPath, videoBuffer, "video/mp4");
 
-  // Cache the result
+  // Cache the result server-side
   await setCached({
     character_id: characterId,
     base_asset_code: asset.code,

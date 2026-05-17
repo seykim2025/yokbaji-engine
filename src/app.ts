@@ -219,7 +219,7 @@ app.delete("/api/characters/:id", async (req, res) => {
 // Generate reaction
 app.post("/api/reactions", reactionRateLimiter, async (req, res) => {
   try {
-    const { character_id, user_message } = req.body;
+    const { character_id, user_message, used_base_codes, cached_video_urls } = req.body;
     if (!character_id || !user_message) {
       res
         .status(400)
@@ -227,7 +227,12 @@ app.post("/api/reactions", reactionRateLimiter, async (req, res) => {
       return;
     }
 
-    const result = await generateReaction({ character_id, user_message });
+    const result = await generateReaction({
+      character_id,
+      user_message,
+      used_base_codes,
+      cached_video_urls,
+    });
 
     // Convert local file paths to serving URLs (only needed in local dev)
     if (

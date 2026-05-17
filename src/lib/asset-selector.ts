@@ -7,13 +7,6 @@ const PROJECT_ROOT = getProjectRoot();
 const ASSETS_DIR = path.join(getAssetsDir(), "base-videos");
 const META_PATH = path.join(PROJECT_ROOT, "src/data/base-assets.json");
 
-/**
- * Temporary fallback flag.
- * Set to true once all 36 base videos are ready.
- * When true, strict gender matching is enforced and the personality-first fallback is removed.
- */
-const ASSETS_FULLY_STOCKED = false;
-
 let _assets: BaseAsset[] | null = null;
 
 export function loadBaseAssets(): BaseAsset[] {
@@ -22,7 +15,6 @@ export function loadBaseAssets(): BaseAsset[] {
   // Try loading from JSON metadata first
   if (fs.existsSync(META_PATH)) {
     const raw = JSON.parse(fs.readFileSync(META_PATH, "utf-8")) as BaseAsset[];
-    // Resolve relative video_path entries against project root
     _assets = raw.map((a) => ({
       ...a,
       video_path: path.isAbsolute(a.video_path)
@@ -58,86 +50,70 @@ export function loadBaseAssets(): BaseAsset[] {
   return _assets;
 }
 
-export function selectBaseAsset(character: CharacterMeta): BaseAsset | null {
+/**
+ * Select a base asset for the character.
+ *
+ * When usedBaseCodes (FE-managed) is provided, it takes precedence over
+ * the server-side character.used_base_numbers for determining which assets
+ * have already been shown.
+ *
+ * Selection priority:
+ * 1. Unused assets (exact gender match first, then N-gender fallback)
+ * 2. Any candidate (all used — for cache-reuse round)
+ */
+export function selectBaseAsset(
+  character: CharacterMeta,
+  usedBaseCodes?: string[]
+): BaseAsset | null {
   const assets = loadBaseAssets();
 
-  if (ASSETS_FULLY_STOCKED) {
-    // Strict mode: exact gender + personality, with N-gender fallback
-    const candidates = assets.filter(
-      (a) =>
-        a.personality === character.personality_type &&
-        (a.gender === character.gender_type || a.gender === "N")
-    );
-    if (candidates.length === 0) return null;
-    const unused = candidates.filter(
-      (a) => !character.used_base_numbers.includes(a.number)
-    );
-    if (unused.length > 0) {
-      const exactMatch = unused.filter((a) => a.gender === character.gender_type);
-      const pool = exactMatch.length > 0 ? exactMatch : unused;
-      return pool[Math.floor(Math.random() * pool.length)];
-    }
-    return candidates[Math.floor(Math.random() * candidates.length)];
-  }
-
-  // --- Temporary personality-first fallback (remove when ASSETS_FULLY_STOCKED = true) ---
-  // Step 1: Prefer exact gender + personality match
-  const exactCandidates = assets.filter(
+  // Candidates: exact gender + personality, with N-gender fallback
+  const candidates = assets.filter(
     (a) =>
       a.personality === character.personality_type &&
-      a.gender === character.gender_type
+      (a.gender === character.gender_type || a.gender === "N")
   );
-  const exactUnused = exactCandidates.filter(
-    (a) => !character.used_base_numbers.includes(a.number)
-  );
-  if (exactUnused.length > 0) {
-    return exactUnused[Math.floor(Math.random() * exactUnused.length)];
+  if (candidates.length === 0) return null;
+
+  // Determine unused candidates
+  const unused = usedBaseCodes
+    ? candidates.filter((a) => !usedBaseCodes.includes(a.code))
+    : candidates.filter((a) => !character.used_base_numbers.includes(a.number));
+
+  if (unused.length > 0) {
+    // Prefer exact gender match over N fallback
+    const exactGender = unused.filter((a) => a.gender === character.gender_type);
+    const pool = exactGender.length > 0 ? exactGender : unused;
+    return pool[Math.floor(Math.random() * pool.length)];
   }
-  if (exactCandidates.length > 0) {
-    // All exact-gender assets used — cycle through them for cache reuse
-    return exactCandidates[Math.floor(Math.random() * exactCandidates.length)];
-  }
 
-  // Step 2: Personality-first fallback — same personality, any gender
-  // e.g. N_SARCASTIC_01 requested but only F_SARCASTIC_01 exists → use F_SARCASTIC_01
-  const personalityCandidates = assets.filter(
-    (a) => a.personality === character.personality_type
-  );
-  if (personalityCandidates.length === 0) return null;
-
-  const personalityUnused = personalityCandidates.filter(
-    (a) => !character.used_base_numbers.includes(a.number)
-  );
-  const pool =
-    personalityUnused.length > 0 ? personalityUnused : personalityCandidates;
-  const selected = pool[Math.floor(Math.random() * pool.length)];
-
-  console.log(
-    `[asset-selector] fallback: no ${character.gender_type}_${character.personality_type} assets available, ` +
-      `using ${selected.code} (personality-first fallback, active until 36 base videos are ready)`
-  );
-
-  return selected;
+  // All candidates used — return random for cache-reuse round
+  const exactGender = candidates.filter((a) => a.gender === character.gender_type);
+  const pool = exactGender.length > 0 ? exactGender : candidates;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
-export function isExhausted(character: CharacterMeta): boolean {
+/**
+ * Check if all base assets for this character have been used.
+ *
+ * When usedBaseCodes (FE-managed) is provided, it takes precedence over
+ * the server-side character.used_base_numbers.
+ */
+export function isExhausted(
+  character: CharacterMeta,
+  usedBaseCodes?: string[]
+): boolean {
   const assets = loadBaseAssets();
 
-  if (ASSETS_FULLY_STOCKED) {
-    const candidates = assets.filter(
-      (a) =>
-        a.personality === character.personality_type &&
-        (a.gender === character.gender_type || a.gender === "N")
-    );
-    return candidates.every((a) =>
-      character.used_base_numbers.includes(a.number)
-    );
-  }
-
-  // During fallback period, exhaustion checks all personality-matched assets
   const candidates = assets.filter(
-    (a) => a.personality === character.personality_type
+    (a) =>
+      a.personality === character.personality_type &&
+      (a.gender === character.gender_type || a.gender === "N")
   );
+
+  if (usedBaseCodes) {
+    return candidates.every((a) => usedBaseCodes.includes(a.code));
+  }
   return candidates.every((a) =>
     character.used_base_numbers.includes(a.number)
   );

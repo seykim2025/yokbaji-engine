@@ -17,35 +17,6 @@ import { exchangeAuthCode, verifyUnlinkCallback } from "./services/toss-login.se
 
 const app = express();
 
-// Rate limiting — per-character cooldown for reaction generation (Replicate calls are expensive)
-const REACTION_COOLDOWN_MS = 30_000; // 30 seconds between reactions per character
-const reactionLastCalled = new Map<string, number>();
-
-function reactionRateLimiter(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-): void {
-  const characterId = req.body?.character_id as string | undefined;
-  if (!characterId) {
-    next();
-    return;
-  }
-  const now = Date.now();
-  const last = reactionLastCalled.get(characterId) ?? 0;
-  const elapsed = now - last;
-  if (elapsed < REACTION_COOLDOWN_MS) {
-    const retryAfter = Math.ceil((REACTION_COOLDOWN_MS - elapsed) / 1000);
-    res.set("Retry-After", String(retryAfter));
-    res.status(429).json({
-      error: `Too many requests. Please wait ${retryAfter}s before generating another reaction.`,
-      retry_after_seconds: retryAfter,
-    });
-    return;
-  }
-  reactionLastCalled.set(characterId, now);
-  next();
-}
 
 // CORS — allow cross-origin requests from the Toss frontend
 app.use((req, res, next) => {
@@ -217,7 +188,7 @@ app.delete("/api/characters/:id", async (req, res) => {
 });
 
 // Generate reaction
-app.post("/api/reactions", reactionRateLimiter, async (req, res) => {
+app.post("/api/reactions", async (req, res) => {
   try {
     const { character_id, user_message, used_base_codes, cached_video_urls } = req.body;
     if (!character_id || !user_message) {

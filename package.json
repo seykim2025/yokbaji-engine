@@ -1,33 +1,26 @@
 {
-  "name": "yokbaji-reaction-engine",
-  "version": "0.0.1",
-  "description": "Yokbaji Reaction GIF Engine - face swap + personality-based dialogue",
-  "main": "dist/index.js",
+  "name": "yokbaji-engine",
+  "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "dev": "tsx src/server.ts",
-    "test": "tsx src/test.ts",
-    "postinstall": "prisma generate"
+    "dev": "vercel dev",
+    "build": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@auth/prisma-adapter": "^2.7.4",
-    "@prisma/client": "^6.6.0",
-    "@vercel/blob": "^2.3.3",
-    "bcryptjs": "^3.0.2",
-    "express": "^5.2.1",
-    "multer": "^2.1.1",
-    "next-auth": "^4.24.11",
-    "replicate": "^1.0.1"
+    "@neondatabase/serverless": "^0.10.4",
+    "@tensorflow-models/blazeface": "^0.1.0",
+    "@tensorflow/tfjs": "^4.20.0",
+    "@tensorflow/tfjs-backend-cpu": "^4.20.0",
+    "@vercel/blob": "^0.27.0",
+    "@vercel/node": "^3.2.0",
+    "formidable": "^3.5.1",
+    "replicate": "^1.0.1",
+    "sharp": "^0.33.3"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/express": "^5.0.6",
-    "@types/multer": "^2.1.0",
-    "@types/node": "^22.0.0",
-    "prisma": "^6.6.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "@types/formidable": "^3.4.5",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
   }
 }

@@ -132,8 +132,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const character_id = body.character_id;
     const rawText = body.user_text ?? body.user_message ?? "";
+
+    console.log("[reaction-api] character_id present:", !!character_id);
+    console.log("[reaction-api] user_message present:", !!body.user_message);
+    console.log("[reaction-api] user_text present:", !!body.user_text);
+    console.log("[reaction-api] normalized_message present:", !!rawText);
+
     if (!character_id || !rawText) {
-      return res.status(400).json({ error: "character_id and user_text (or user_message) are required" });
+      const missing: string[] = [];
+      if (!character_id) missing.push("character_id");
+      if (!rawText) missing.push("user_message or user_text");
+      return res.status(400).json({
+        error: "validation_error",
+        message: "character_id and message (user_message or user_text) are required",
+        missing_fields: missing,
+      });
     }
 
     const recentDialogueIds: string[] = body.recent_dialogue_ids ?? [];
@@ -144,6 +157,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Classify input
     const { input_tag, intensity } = classifyInput(rawText);
+    console.log("[reaction-api] input_tag:", input_tag, "intensity:", intensity);
 
     // Blocked path — return safe fallback without video
     if (input_tag === "blocked") {
@@ -188,6 +202,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (entry) {
       dialogueText = entry.lines.join(" ");
       dialogueId = entry.id;
+      console.log("[reaction-api] dialogue_id:", dialogueId);
+      console.log("[reaction-api] base_asset_code:", baseAssetCode);
     } else {
       const result = await generateDialogue(character.personality_type, character.gender_type, rawText);
       dialogueText = result.dialogue;
